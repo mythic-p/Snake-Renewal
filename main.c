@@ -43,6 +43,7 @@
 // ¶¨ÒåÓÎÏ·³£Á¿
 #define RANKING_SCORE_NUM 10 // ÅÅÐÐ°ñÄÜ¹»¼ÇÂ¼µÄ·ÖÊýÊýÁ¿
 #define SCORE_MAXIMUM 9999 // ×î´ó·ÖÊý
+#define GAME_SPEED 60 // ÏÞÖÆÓÎÏ·µÄË¢ÐÂÆµÂÊ£¬ÕâÀïÎÒÄ¬ÈÏÎª60FPS£¬¼´1ÃëË¢ÐÂ60´Î 
 #define MOVEMENT_INTERVAL 100 // ÓÎÏ·Ë¢ÐÂÖÜÆÚ£¬ºÁÃë
 #define FOOD_SCORE 50 // Ê³ÎïµÄ·ÖÊý
 
@@ -55,6 +56,8 @@ DWORD Bytes = 0;
 
 // [y][x]
 unsigned char Data[SCREEN_HEIGHT][SCREEN_WIDTH];
+
+double intervalCount = 0;
 
 // ¶¨ÒåÓÎÏ·Ã¶¾Ù
 // Ìî³ä×Ö·ûµÄ·½Ïò
@@ -111,15 +114,16 @@ void Utils_SetText(COORD textPosition, const char* text); // ÔÚtextPositionÎ»ÖÃÌ
 void Utils_ResetContent(); // ÖØÖÃÓÃÓÚÏÔÊ¾µÄ×Ö·ûÊý×é
 void Utils_DoubleBuffer(); // Ë«»º³å
 void Utils_BubbleSort(int* numArray, size_t numCount);// Ã°ÅÝÅÅÐò£¬¿ÉÄÜ»á»»³É¿ìÅÅ
+void Utils_Swap(int* a, int* b); // ½»»»º¯Êý£¬Ê¹ÓÃÎ»ÔËËãÊµÏÖ 
 // ÓÎÏ·Àà
 void Game_InitGameData(); // ³õÊ¼»¯ÓÎÏ·Êý¾Ý
 void Game_SaveScore(int score); // ´¢´æ·ÖÊý
-void Game_WorldBehave(); // ´¦Àí
-void Game_SpawnFood();
-void Game_AddNewTail();
-void Game_MoveBodies();
+void Game_WorldBehave(); // ´¦ÀíÒÆ¶¯Âß¼­ 
+void Game_SpawnFood(); // Éú³ÉÒ»¸öÐÂµÄÊ³Îï 
+void Game_AddNewTail(); // Ê¹ÉßµÄ³¤¶ÈÔö¼Ó1 
+void Game_MoveBodies(); // ÒÆ¶¯ÉßÉí£¬ÎÒÃÇµÄÂß¼­Ë³ÐòÊÇ£¬ÏÈ´¦ÀíÉßÍ·µÄÒÆ¶¯£¬È»ºóÔÙ´¦ÀíÉßÉíµÄÒÆ¶¯ 
 // ºËÐÄ²¿·Ö
-void Core_DoubleBufferInitialize();
+void Core_DoubleBufferInitialize(); // ³õÊ¼»¯Ë«»º³å 
 
 int main(int argc, char* argv[])
 {
@@ -127,6 +131,7 @@ int main(int argc, char* argv[])
 	Core_DoubleBufferInitialize();
 	for (;;)
 	{
+		// ÕâÀïÎÒ²ÉÓÃµÄÊÇÏÈ´¦ÀíÓÎÏ·Âß¼­ÔÙ½«½á¹û»­µ½¿ØÖÆÌ¨ÉÏ 
 		GameLogic();
 		ScreenDraw();
 	}
@@ -136,9 +141,9 @@ int main(int argc, char* argv[])
 void Core_DoubleBufferInitialize()
 {
 	// ÉèÖÃ¿ØÖÆÌ¨´°¿Ú´óÐ¡
-	system("mode con cols=60 lines=35");
-	SetConsoleOutputCP(437);
-	SetConsoleTitle("Snake");
+	system("mode con cols=60 lines=35"); // ÉèÖÃ¿ØÖÆÌ¨µÄ´óÐ¡£¬ÕâÀïÎÒÉèÖÃ³É60ÁÐ35ÐÐ 
+	SetConsoleOutputCP(437); // ¸Ä±ä¿ØÖÆÌ¨Ê¹ÓÃµÄ×Ö·û¼¯£¬Ê¹ÆäÄÜ¹»Ê¹ÓÃÎÒÃÇÓÃÀ´»­±ß¿òµÄ×Ö·û¡¤µ«¸Ä±äºóÎÒÃÇÎÞ·¨Í¨¹ý¿ØÖÆÌ¨Êä³öÖÐÎÄ×Ö·û¡£ 
+	SetConsoleTitle("Snake"); // ÉèÖÃ¿ØÖÆÌ¨´°¿ÚµÄ±êÌâ 
 	// ³õÊ¼»¯»º³å
 	ScreenBufferPrev = CreateConsoleScreenBuffer(GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
 	ScreenBufferPost = CreateConsoleScreenBuffer(GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
@@ -158,7 +163,7 @@ void Core_DoubleBufferInitialize()
 void ScreenDraw()
 {
 	Utils_ResetContent();
-	switch (CurGameState)
+	switch (CurGameState) // ´¦Àíµ±Ç°ÓÎÏ·×´Ì¬ 
 	{
 		case Title:
 			Screen_DrawTitle();
@@ -181,9 +186,9 @@ void ScreenDraw()
 
 void GameLogic()
 {
-	if (kbhit())
+	if (kbhit()) // °´¼ü¼ì²â£¬Ö»ÓÐµ±ÈÎºÎ°´¼ü±»°´ÏÂºó²Å»áÏìÓ¦ 
 	{
-		char key = _getch();
+		char key = _getch(); // È¡µÃµ±Ç°°´ÏÂµÄ°´¼ü 
 		if (key == KEY_ESCAPE)
 		{
 			exit(0);
@@ -224,6 +229,7 @@ void GameLogic()
 							SnakePosition[0].Y = 15;
 							SnakeDir = 0;
 							SnakeLength = 1;
+							IsGameOver = 0;
 							Game_SpawnFood();
 							break;
 						case 1:// ÅÅÐÐ°ñ
@@ -427,7 +433,6 @@ void Game_WorldBehave()
 		CurGameScore += FOOD_SCORE;
 		Game_MoveBodies();
 		Game_AddNewTail();
-		
 		Game_SpawnFood();
 	}
 }
@@ -437,7 +442,7 @@ void Game_SpawnFood()
 	BOOL checked = FALSE;
 	while (!checked)
 	{
-		srand((unsigned)time(NULL));
+		srand((unsigned)time(NULL));// ÖØÖÃËæ»úÊýÖÖ×Ó 
 		FoodPosition.X = 2 + rand() % (GAME_WIDTH - 5);
 		FoodPosition.Y = 2 + rand() % (GAME_HEIGHT - 5);
 		if (Data[FoodPosition.Y][FoodPosition.X] != '@' && Data[FoodPosition.Y][FoodPosition.X] != '$')
@@ -614,12 +619,17 @@ void Utils_BubbleSort(int* numArray, size_t numCount)
 		{
 			if (numArray[j] > numArray[j + 1])
 			{
-				int temp = numArray[j];
-				numArray[j] = numArray[j + 1];
-				numArray[j + 1] = temp;
+				Utils_Swap(&numArray[j], &numArray[j + 1]);
 			}
 		}
 	}
+}
+
+void Utils_Swap(int* a, int* b)
+{
+	*a = *a ^ *b;
+	*b = *a ^ *b;
+	*a = *a ^ *b;
 }
 
 //extern "C" WINBASEAPI HWND WINAPI GetConsoleWindow ();
